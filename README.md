@@ -1,101 +1,142 @@
 # NetBox GPT
 
-A natural language interface for NetBox using OpenAI's GPT models. Query and manage your network infrastructure using simple English or Portuguese commands.
+![GitHub License](https://img.shields.io/github/license/reinaldosaraiva/netbox-gpt?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)
+![Last Commit](https://img.shields.io/github/last-commit/reinaldosaraiva/netbox-gpt?style=for-the-badge)
 
-## Features
+Uma interface em linguagem natural para NetBox que utiliza os modelos GPT da OpenAI. Consulte e gerencie sua infraestrutura de rede usando comandos simples em inglês ou português.
 
-- Query NetBox inventory using natural language
-- Search for devices by type, name, site, and status
-- Create new devices using conversational commands
-- Support for both English and Portuguese queries
-- Fallback to regex pattern matching when OpenAI API is unavailable
-- Simulation mode for testing without a NetBox instance
+> NetBox GPT transforma a maneira como você interage com o NetBox, permitindo consultas em linguagem natural e automatizando tarefas comuns de gerenciamento de rede sem a necessidade de aprender APIs complexas.
 
-## Installation
+## 🚀 Funcionalidades
 
+- ✅ Consulta ao inventário do NetBox usando linguagem natural
+- ✅ Busca de dispositivos por tipo, nome, site e status
+- ✅ Criação de novos dispositivos usando comandos conversacionais
+- ✅ Suporte para consultas em inglês e português
+- ✅ Modo alternativo com regex quando a API da OpenAI não está disponível
+- ✅ Modo de simulação para testes sem uma instância do NetBox
+
+## 📋 Status do Projeto
+
+O projeto está em desenvolvimento ativo. Próximas melhorias incluem:
+
+- [x] Suporte a consultas básicas de dispositivos
+- [x] Modo de simulação para testes sem NetBox
+- [x] Suporte a múltiplos idiomas
+- [ ] Integração com novas entidades do NetBox (VLANs, IPs, etc.)
+- [ ] Integração com outros LLMs além do OpenAI GPT
+
+## ⚙️ Pré-requisitos
+
+Antes de começar, você vai precisar ter instalado:
+
+- Python 3.8+
+- Uma instância do NetBox acessível (ou usar o modo de simulação)
+- Chave de API da OpenAI (opcional)
+
+## 💻 Instalação
+
+### Clone o repositório
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/netbox-gpt.git
+git clone https://github.com/reinaldosaraiva/netbox-gpt.git
 cd netbox-gpt
+```
 
-# Create a virtual environment
+### Crie um ambiente virtual
+```bash
+# Linux/macOS
 python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# or
-# venv\Scripts\activate  # Windows
+source venv/bin/activate
 
-# Install the package
+# Windows
+python -m venv venv
+venv\Scripts\activate
+```
+
+### Instale o pacote
+```bash
 pip install -e .
 ```
 
-## Configuration
+## ⚙️ Configuração
 
-Copy the `.env.example` file to `.env` and configure your settings:
+Copie o arquivo `.env.example` para `.env` e configure suas configurações:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit the `.env` file:
+Edite o arquivo `.env`:
 
 ```
-# NetBox API configuration
+# Configuração da API do NetBox
 NETBOX_API_URL=http://your-netbox-instance/api
 NETBOX_API_TOKEN=your_netbox_api_token
-NETBOX_SIMULATION_MODE=false  # Set to true to use mock data
+NETBOX_SIMULATION_MODE=false  # Defina como true para usar dados simulados
 
-# OpenAI (ChatGPT) configuration
+# Configuração da OpenAI (ChatGPT)
 OPENAI_API_KEY=sk-your-openai-api-key
 ```
 
-## Usage
+## 🔍 Modo de Uso
 
-### Command Line Interface
+### Interface de Linha de Comando
 
 ```bash
-# Run with a direct query
+# Executar com uma consulta direta
 netbox-gpt "list all routers"
 netbox-gpt "find device switch-core-01"
 netbox-gpt "create new firewall named fw-edge-02 from Fortinet in Data Center 2"
 
-# Start interactive mode
+# Iniciar o modo interativo
 netbox-gpt
 ```
 
-### Example Queries
+### Exemplos de Consultas
 
-#### Listing Devices
+<details>
+<summary>Listagem de Dispositivos</summary>
+
 - "List all devices"
 - "Show me the routers"
 - "What load balancers do we have?"
 - "Mostrar todos os switches" (Portuguese)
+</details>
 
-#### Finding Specific Devices
+<details>
+<summary>Busca de Dispositivos Específicos</summary>
+
 - "Find device router-core-01"
 - "Show details for switch-access-02"
 - "Encontrar dispositivo firewall-edge-01" (Portuguese)
+</details>
 
-#### Creating Devices
+<details>
+<summary>Criação de Dispositivos</summary>
+
 - "Create a new switch named switch-core-03 from Cisco in Data Center 1"
 - "Add firewall Fortinet FortiGate 3700F in site Data Center 2"
 - "Criar um novo servidor HP DL380 chamado server-db-01" (Portuguese)
+</details>
 
-## Simulation Mode
+## 🧪 Modo de Simulação
 
-For testing or demonstration without a NetBox instance, set `NETBOX_SIMULATION_MODE=true` in your `.env` file. This uses predefined mock data.
+> [!TIP]
+> Para testes ou demonstração sem uma instância do NetBox, configure `NETBOX_SIMULATION_MODE=true` no seu arquivo `.env`. Isso usa dados simulados predefinidos.
 
-## Offline Mode
+## 🔌 Modo Offline
 
-If the OpenAI API is not available or you don't have an API key, the assistant will automatically fall back to regex-based pattern matching for basic queries.
+Se a API da OpenAI não estiver disponível ou você não tiver uma chave de API, o assistente automaticamente utilizará pattern matching baseado em regex para consultas básicas.
 
-## Requirements
+## 👨‍💻 Contribuindo
 
-- Python 3.8+
-- requests
-- python-dotenv
-- rich (for formatted output)
-- OpenAI API key (optional)
+Contribuições são bem-vindas! Consulte o arquivo [CONTRIBUTING.md](CONTRIBUTING.md) para obter mais informações sobre como contribuir para este projeto.
 
-## License
+## 📄 Licença
 
-MIT
+Este projeto está sob a licença MIT - veja o arquivo [LICENSE](LICENSE.md) para mais detalhes.
+
+---
+
+Feito com ❤️ por [Reinaldo Saraiva](https://github.com/reinaldosaraiva)

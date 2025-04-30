@@ -58,6 +58,7 @@ def detect_intent_regex(query: str) -> Dict[str, Any]:
                 # Map common types
                 device_type_map = {
                     'roteador': 'router', 'roteadores': 'router',
+                    'routers': 'router',  # Ensure "routers" is mapped to singular "router"
                     'balanceador': 'load-balancer', 'balanceadores': 'load-balancer',
                     'servidor': 'server', 'servidores': 'server'
                 }

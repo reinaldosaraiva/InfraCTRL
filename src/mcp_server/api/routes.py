@@ -399,17 +399,22 @@ async def list_tools(
         for capability in adapter.capabilities:
             # Create tool parameters from capability parameters
             parameters = []
-            for param_name, param_info in capability.parameters.items():
-                if not isinstance(param_info, dict):
-                    continue  # Skip non-dict parameters
-                    
-                parameters.append({
-                    "name": param_name,
-                    "type": param_info.get("type", "string"),
-                    "description": param_info.get("description", ""),
-                    "required": param_info.get("required", False),
-                    "default": param_info.get("default")
-                })
+            try:
+                for param_name, param_info in capability.parameters.items():
+                    if not isinstance(param_info, dict):
+                        logger.warning(f"Parameter {param_name} is not a dict: {param_info}")
+                        continue  # Skip non-dict parameters
+                        
+                    parameters.append({
+                        "name": param_name,
+                        "type": param_info.get("type", "string"),
+                        "description": param_info.get("description", ""),
+                        "required": param_info.get("required", False),
+                        "default": param_info.get("default")
+                    })
+            except Exception as e:
+                logger.error(f"Error processing parameters for capability {capability.name}: {str(e)}")
+                parameters = []  # Reset parameters on error
             
             # Add tool based on capability
             tools.append({
@@ -452,13 +457,14 @@ async def execute_tool(
         )
     
     # Parse adapter name and capability from tool name
-    try:
-        adapter_name, capability_name = tool_name.split(".", 1)
-    except ValueError:
+    parts = tool_name.split(".", 1)
+    if len(parts) != 2:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid tool name format: {tool_name}. Expected format: adapter_name.capability_name",
         )
+    
+    adapter_name, capability_name = parts
     
     # Get adapter
     adapter = adapter_registry.get_adapter_instance(adapter_name)
@@ -515,15 +521,21 @@ async def sse_event_generator():
     """Generate SSE events."""
     try:
         # Send initial connected event
-        yield f"event: connected\ndata: {{}}\n\n"
+        yield f"event: connected\ndata: {json.dumps({})}\n\n"
         
         # Keep connection alive with heartbeat events
-        while True:
+        count = 0
+        while count < 10:  # Limit to prevent infinite loops
             await asyncio.sleep(30)
-            yield f"event: heartbeat\ndata: {{}}\n\n"
-    except asyncio.CancelledError:
+            yield f"event: heartbeat\ndata: {json.dumps({})}\n\n"
+            count += 1
+            
+    except Exception as e:
+        logger.error(f"Error in SSE generator: {str(e)}")
+        yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+    finally:
         logger.info("SSE connection closed")
-        yield f"event: disconnect\ndata: {{}}\n\n"
+        yield f"event: disconnect\ndata: {json.dumps({})}\n\n"
 
 @sse_router.get(
     "/",

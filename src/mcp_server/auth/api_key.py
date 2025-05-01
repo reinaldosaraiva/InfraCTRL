@@ -217,3 +217,28 @@ async def get_api_key(api_key: str = Depends(X_API_KEY)) -> str:
             headers={"WWW-Authenticate": "APIKey"},
         )
     return api_key
+
+
+async def get_optional_api_key(api_key: Optional[str] = Depends(X_API_KEY)) -> Optional[str]:
+    """
+    Dependency for optionally validating API key.
+    Allows requests without API key for certain endpoints.
+    
+    Args:
+        api_key: API key from the X-API-Key header, or None
+        
+    Returns:
+        The API key if valid, or None if not provided
+    """
+    if api_key is None:
+        # Allow access without API key
+        return None
+        
+    # If key is provided, validate it
+    if not api_key_service.validate_key(api_key):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "APIKey"},
+        )
+    return api_key

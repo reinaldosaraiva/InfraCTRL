@@ -24,7 +24,7 @@ from mcp_server.api.models import (
     ApiKeyInfo,
     ErrorResponse,
 )
-from mcp_server.auth.api_key import api_key_service, get_api_key
+from mcp_server.auth.api_key import api_key_service, get_api_key, get_optional_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -356,16 +356,14 @@ def delete_api_key(
     return None
 
 
-# Root API endpoint
+# Root API endpoint - no authentication required
 @router.get(
     "/",
     summary="API Root",
 )
-async def api_root(
-    api_key: str = Depends(get_api_key),
-):
+async def api_root():
     """
-    API root information.
+    API root information. No authentication required.
     """
     return {
         "name": "MCP Server API",
@@ -379,16 +377,15 @@ async def api_root(
         ]
     }
 
-# Tools routes
+# Tools routes - no authentication required
 @tools_router.get(
     "/",
     summary="List available tools",
 )
-async def list_tools(
-    api_key: str = Depends(get_api_key),
-):
+async def list_tools():
     """
     List all available tools that can be used with this MCP Server.
+    No authentication required.
     """
     # Create a minimal but functional tools list for Cursor
     tools = [
@@ -597,17 +594,17 @@ async def execute_tool(
             content={"error": "Internal server error", "detail": str(e)}
         )
 
-# SSE endpoint
+# SSE endpoint - no authentication required
 @sse_router.get(
     "/",
     summary="SSE endpoint for real-time events",
 )
 async def sse_endpoint(
     request: Request,
-    api_key: str = Depends(get_api_key),
 ):
     """
     Simple SSE endpoint that returns a static response for Cursor IDE compatibility.
+    No authentication required.
     """
     # Create a simple SSE response with just a connected event
     async def simple_sse_generator():

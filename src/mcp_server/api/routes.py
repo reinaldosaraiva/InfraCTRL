@@ -382,7 +382,6 @@ async def api_root(
 # Tools routes
 @tools_router.get(
     "/",
-    response_model=ToolsResponse,
     summary="List available tools",
 )
 async def list_tools(
@@ -391,44 +390,69 @@ async def list_tools(
     """
     List all available tools that can be used with this MCP Server.
     """
-    # Convert capabilities from adapters to tools format expected by Cursor
-    tools = []
-    adapter_instances = adapter_registry.get_all_adapter_instances()
-    
-    for name, adapter in adapter_instances.items():
-        for capability in adapter.capabilities:
-            # Create tool parameters from capability parameters
-            parameters = []
-            try:
-                for param_name, param_info in capability.parameters.items():
-                    if not isinstance(param_info, dict):
-                        logger.warning(f"Parameter {param_name} is not a dict: {param_info}")
-                        continue  # Skip non-dict parameters
-                        
-                    parameters.append({
-                        "name": param_name,
-                        "type": param_info.get("type", "string"),
-                        "description": param_info.get("description", ""),
-                        "required": param_info.get("required", False),
-                        "default": param_info.get("default")
-                    })
-            except Exception as e:
-                logger.error(f"Error processing parameters for capability {capability.name}: {str(e)}")
-                parameters = []  # Reset parameters on error
-            
-            # Add tool based on capability
-            tools.append({
-                "name": f"{name}.{capability.name}",
-                "description": capability.description,
-                "parameters": parameters
-            })
+    # Create a minimal but functional tools list for Cursor
+    tools = [
+        {
+            "name": "netbox.list_devices",
+            "description": "List devices from NetBox, optionally filtered by type",
+            "parameters": [
+                {
+                    "name": "device_type",
+                    "type": "string",
+                    "description": "Filter by device type (e.g., router, switch)",
+                    "required": False
+                }
+            ]
+        },
+        {
+            "name": "netbox.get_device",
+            "description": "Get a specific device by name",
+            "parameters": [
+                {
+                    "name": "name",
+                    "type": "string",
+                    "description": "Name of the device to find",
+                    "required": True
+                }
+            ]
+        },
+        {
+            "name": "netbox.create_device",
+            "description": "Create a new device in NetBox",
+            "parameters": [
+                {
+                    "name": "name",
+                    "type": "string",
+                    "description": "Name of the new device",
+                    "required": True
+                },
+                {
+                    "name": "device_type",
+                    "type": "string",
+                    "description": "Type of device (e.g., router, switch)",
+                    "required": True
+                },
+                {
+                    "name": "manufacturer",
+                    "type": "string",
+                    "description": "Manufacturer of the device",
+                    "required": True
+                },
+                {
+                    "name": "site_name",
+                    "type": "string",
+                    "description": "Site where the device is located",
+                    "required": True
+                }
+            ]
+        }
+    ]
     
     return {"tools": tools}
 
 
 @tools_router.post(
     "/execute",
-    response_model=CommandResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Execute a tool",
 )
@@ -439,104 +463,141 @@ async def execute_tool(
     """
     Execute a tool with the provided parameters.
     """
-    # Parse request body
     try:
-        body = await request.json()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid request body: {str(e)}",
-        )
-    
-    # Extract tool name and parameters
-    tool_name = body.get("name", "")
-    if not tool_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tool name is required",
-        )
-    
-    # Parse adapter name and capability from tool name
-    parts = tool_name.split(".", 1)
-    if len(parts) != 2:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid tool name format: {tool_name}. Expected format: adapter_name.capability_name",
-        )
-    
-    adapter_name, capability_name = parts
-    
-    # Get adapter
-    adapter = adapter_registry.get_adapter_instance(adapter_name)
-    if not adapter:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Adapter not found: {adapter_name}",
-        )
-    
-    # Check if adapter supports capability
-    if not adapter.has_capability(capability_name):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Adapter {adapter_name} does not support capability: {capability_name}",
-        )
-    
-    # Extract parameters
-    params = body.get("parameters", {})
-    
-    # Create command
-    cmd = Command(
-        capability=capability_name,
-        parameters=params,
-        resource_type=body.get("resource_type"),
-        resource_id=body.get("resource_id"),
-    )
-    
-    # Execute command
-    try:
-        result = await adapter.execute(cmd)
-    except Exception as e:
-        logger.error(f"Error executing tool {tool_name}: {e}")
-        result = CommandResult(
-            status=CommandStatus.FAILED,
-            error=f"Error executing tool: {str(e)}",
-        )
-    
-    # Create response
-    now = datetime.utcnow()
-    return {
-        "id": str(uuid.uuid4()),
-        "adapter": adapter_name,
-        "capability": capability_name,
-        "status": result.status.value,
-        "data": result.data,
-        "message": result.message,
-        "error": result.error,
-        "created_at": now,
-        "updated_at": now,
-    }
-
-# SSE endpoint for real-time events
-async def sse_event_generator():
-    """Generate SSE events."""
-    try:
-        # Send initial connected event
-        yield f"event: connected\ndata: {json.dumps({})}\n\n"
+        # Parse request body
+        try:
+            body = await request.json()
+        except Exception as e:
+            logger.error(f"Invalid request body: {str(e)}")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"error": "Invalid request body", "detail": str(e)}
+            )
         
-        # Keep connection alive with heartbeat events
-        count = 0
-        while count < 10:  # Limit to prevent infinite loops
-            await asyncio.sleep(30)
-            yield f"event: heartbeat\ndata: {json.dumps({})}\n\n"
-            count += 1
+        # Extract tool name and parameters
+        tool_name = body.get("name", "")
+        if not tool_name:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"error": "Tool name is required"}
+            )
+        
+        # Extract parameters
+        params = body.get("parameters", {})
+        
+        # Handle the special case of list_devices
+        if tool_name == "netbox.list_devices":
+            # Get the adapter
+            adapter = adapter_registry.get_adapter_instance("default-netbox")
+            if not adapter:
+                return JSONResponse(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    content={"error": "NetBox adapter not found"}
+                )
+            
+            # Create and execute command
+            cmd = Command(
+                capability="list_devices",
+                parameters=params,
+                resource_type="device",
+            )
+            
+            result = await adapter.execute(cmd)
+            
+            # Create response
+            now = datetime.utcnow()
+            return {
+                "id": str(uuid.uuid4()),
+                "adapter": "default-netbox",
+                "capability": "list_devices",
+                "status": result.status.value,
+                "data": result.data,
+                "message": result.message,
+                "error": result.error,
+                "created_at": now,
+                "updated_at": now,
+            }
+            
+        # Handle the special case of get_device
+        elif tool_name == "netbox.get_device":
+            # Get the adapter
+            adapter = adapter_registry.get_adapter_instance("default-netbox")
+            if not adapter:
+                return JSONResponse(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    content={"error": "NetBox adapter not found"}
+                )
+            
+            # Create and execute command
+            cmd = Command(
+                capability="get_device",
+                parameters=params,
+                resource_type="device",
+            )
+            
+            result = await adapter.execute(cmd)
+            
+            # Create response
+            now = datetime.utcnow()
+            return {
+                "id": str(uuid.uuid4()),
+                "adapter": "default-netbox",
+                "capability": "get_device",
+                "status": result.status.value,
+                "data": result.data,
+                "message": result.message,
+                "error": result.error,
+                "created_at": now,
+                "updated_at": now,
+            }
+            
+        # Handle the special case of create_device
+        elif tool_name == "netbox.create_device":
+            # Get the adapter
+            adapter = adapter_registry.get_adapter_instance("default-netbox")
+            if not adapter:
+                return JSONResponse(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    content={"error": "NetBox adapter not found"}
+                )
+            
+            # Create and execute command
+            cmd = Command(
+                capability="create_device",
+                parameters=params,
+                resource_type="device",
+            )
+            
+            result = await adapter.execute(cmd)
+            
+            # Create response
+            now = datetime.utcnow()
+            return {
+                "id": str(uuid.uuid4()),
+                "adapter": "default-netbox",
+                "capability": "create_device",
+                "status": result.status.value,
+                "data": result.data,
+                "message": result.message,
+                "error": result.error,
+                "created_at": now,
+                "updated_at": now,
+            }
+            
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"error": f"Unknown tool: {tool_name}"}
+            )
             
     except Exception as e:
-        logger.error(f"Error in SSE generator: {str(e)}")
-        yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
-    finally:
-        logger.info("SSE connection closed")
-        yield f"event: disconnect\ndata: {json.dumps({})}\n\n"
+        logger.error(f"Unexpected error executing tool: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "Internal server error", "detail": str(e)}
+        )
 
+# SSE endpoint
 @sse_router.get(
     "/",
     summary="SSE endpoint for real-time events",
@@ -546,14 +607,19 @@ async def sse_endpoint(
     api_key: str = Depends(get_api_key),
 ):
     """
-    Server-Sent Events (SSE) endpoint for real-time events.
+    Simple SSE endpoint that returns a static response for Cursor IDE compatibility.
     """
+    # Create a simple SSE response with just a connected event
+    async def simple_sse_generator():
+        # Send only a connected event and then close
+        yield f"event: connected\ndata: {json.dumps({})}\n\n"
+        
     return StreamingResponse(
-        sse_event_generator(),
+        simple_sse_generator(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
+            "Connection": "close",  # Tell client to close connection after receiving data
         }
     )
 

@@ -136,10 +136,10 @@ class Tool(BaseModel):
     
     name: str = Field(..., description="Name of the tool")
     description: str = Field(..., description="Description of the tool")
-    parameters: List[ToolParameter] = Field(default_factory=list, description="Parameters for the tool")
+    parameters: List[Dict[str, Any]] = Field(default_factory=list, description="Parameters for the tool")
 
 
 class ToolsResponse(BaseModel):
     """API model for tools response."""
     
-    tools: List[Tool] = Field(..., description="List of available tools")
+    tools: List[Dict[str, Any]] = Field(..., description="List of available tools")

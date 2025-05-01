@@ -13,6 +13,7 @@ from mcp_server.api.routes import router as api_router
 from mcp_server.adapters.registry import adapter_registry
 from mcp_server.adapters.netbox import NetBoxAdapter
 from mcp_server.auth.api_key import api_key_service
+from mcp_server.cursor_integration import create_cursor_integration_app
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +48,10 @@ def create_app() -> FastAPI:
     
     # Include API router
     app.include_router(api_router)
+    
+    # Mount Cursor IDE integration app
+    cursor_app = create_cursor_integration_app()
+    app.mount("/cursor", cursor_app)
     
     # Register built-in adapters
     adapter_registry.register_adapter_class("netbox", NetBoxAdapter)

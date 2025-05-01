@@ -7,6 +7,9 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from fastapi.security import APIKeyHeader
+from fastapi.responses import StreamingResponse
+import asyncio
+import json
 
 from mcp_server.adapters.registry import adapter_registry
 from mcp_server.adapters.base import Command, CommandResult, CommandStatus
@@ -30,6 +33,8 @@ router = APIRouter(prefix="/api/v1")
 adapters_router = APIRouter(prefix="/adapters", tags=["adapters"])
 commands_router = APIRouter(prefix="/commands", tags=["commands"])
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+tools_router = APIRouter(prefix="/tools", tags=["tools"])
+sse_router = APIRouter(prefix="/sse", tags=["sse"])
 
 
 # Adapter routes
@@ -351,7 +356,198 @@ def delete_api_key(
     return None
 
 
+# Root API endpoint
+@router.get(
+    "/",
+    summary="API Root",
+)
+async def api_root(
+    api_key: str = Depends(get_api_key),
+):
+    """
+    API root information.
+    """
+    return {
+        "name": "MCP Server API",
+        "version": "0.1.0",
+        "endpoints": [
+            "/adapters",
+            "/commands",
+            "/auth/api-keys",
+            "/tools",
+            "/sse"
+        ]
+    }
+
+# Tools routes
+@tools_router.get(
+    "/",
+    response_model=ToolsResponse,
+    summary="List available tools",
+)
+async def list_tools(
+    api_key: str = Depends(get_api_key),
+):
+    """
+    List all available tools that can be used with this MCP Server.
+    """
+    # Convert capabilities from adapters to tools format expected by Cursor
+    tools = []
+    adapter_instances = adapter_registry.get_all_adapter_instances()
+    
+    for name, adapter in adapter_instances.items():
+        for capability in adapter.capabilities:
+            # Create tool parameters from capability parameters
+            parameters = []
+            for param_name, param_info in capability.parameters.items():
+                if not isinstance(param_info, dict):
+                    continue  # Skip non-dict parameters
+                    
+                parameters.append({
+                    "name": param_name,
+                    "type": param_info.get("type", "string"),
+                    "description": param_info.get("description", ""),
+                    "required": param_info.get("required", False),
+                    "default": param_info.get("default")
+                })
+            
+            # Add tool based on capability
+            tools.append({
+                "name": f"{name}.{capability.name}",
+                "description": capability.description,
+                "parameters": parameters
+            })
+    
+    return {"tools": tools}
+
+
+@tools_router.post(
+    "/execute",
+    response_model=CommandResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Execute a tool",
+)
+async def execute_tool(
+    request: Request,
+    api_key: str = Depends(get_api_key),
+):
+    """
+    Execute a tool with the provided parameters.
+    """
+    # Parse request body
+    try:
+        body = await request.json()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid request body: {str(e)}",
+        )
+    
+    # Extract tool name and parameters
+    tool_name = body.get("name", "")
+    if not tool_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tool name is required",
+        )
+    
+    # Parse adapter name and capability from tool name
+    try:
+        adapter_name, capability_name = tool_name.split(".", 1)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid tool name format: {tool_name}. Expected format: adapter_name.capability_name",
+        )
+    
+    # Get adapter
+    adapter = adapter_registry.get_adapter_instance(adapter_name)
+    if not adapter:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adapter not found: {adapter_name}",
+        )
+    
+    # Check if adapter supports capability
+    if not adapter.has_capability(capability_name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Adapter {adapter_name} does not support capability: {capability_name}",
+        )
+    
+    # Extract parameters
+    params = body.get("parameters", {})
+    
+    # Create command
+    cmd = Command(
+        capability=capability_name,
+        parameters=params,
+        resource_type=body.get("resource_type"),
+        resource_id=body.get("resource_id"),
+    )
+    
+    # Execute command
+    try:
+        result = await adapter.execute(cmd)
+    except Exception as e:
+        logger.error(f"Error executing tool {tool_name}: {e}")
+        result = CommandResult(
+            status=CommandStatus.FAILED,
+            error=f"Error executing tool: {str(e)}",
+        )
+    
+    # Create response
+    now = datetime.utcnow()
+    return {
+        "id": str(uuid.uuid4()),
+        "adapter": adapter_name,
+        "capability": capability_name,
+        "status": result.status.value,
+        "data": result.data,
+        "message": result.message,
+        "error": result.error,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+# SSE endpoint for real-time events
+async def sse_event_generator():
+    """Generate SSE events."""
+    try:
+        # Send initial connected event
+        yield f"event: connected\ndata: {{}}\n\n"
+        
+        # Keep connection alive with heartbeat events
+        while True:
+            await asyncio.sleep(30)
+            yield f"event: heartbeat\ndata: {{}}\n\n"
+    except asyncio.CancelledError:
+        logger.info("SSE connection closed")
+        yield f"event: disconnect\ndata: {{}}\n\n"
+
+@sse_router.get(
+    "/",
+    summary="SSE endpoint for real-time events",
+)
+async def sse_endpoint(
+    request: Request,
+    api_key: str = Depends(get_api_key),
+):
+    """
+    Server-Sent Events (SSE) endpoint for real-time events.
+    """
+    return StreamingResponse(
+        sse_event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
 # Add sub-routers to main router
 router.include_router(adapters_router)
 router.include_router(commands_router)
 router.include_router(auth_router)
+router.include_router(tools_router)
+router.include_router(sse_router)

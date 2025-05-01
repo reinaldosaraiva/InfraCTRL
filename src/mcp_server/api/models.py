@@ -119,3 +119,27 @@ class ErrorResponse(BaseModel):
     
     error: str = Field(..., description="Error message")
     detail: Optional[str] = Field(None, description="Detailed error information")
+
+
+class ToolParameter(BaseModel):
+    """API model for tool parameter information."""
+    
+    name: str = Field(..., description="Name of the parameter")
+    type: str = Field(..., description="Type of the parameter")
+    description: str = Field(..., description="Description of the parameter")
+    required: bool = Field(default=False, description="Whether the parameter is required")
+    default: Optional[Any] = Field(None, description="Default value for the parameter")
+
+
+class Tool(BaseModel):
+    """API model for tool information."""
+    
+    name: str = Field(..., description="Name of the tool")
+    description: str = Field(..., description="Description of the tool")
+    parameters: List[ToolParameter] = Field(default_factory=list, description="Parameters for the tool")
+
+
+class ToolsResponse(BaseModel):
+    """API model for tools response."""
+    
+    tools: List[Tool] = Field(..., description="List of available tools")

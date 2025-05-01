@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from netbox_gpt.assistant import process_query, detect_intent_regex
+from infractrl.assistant import process_query, detect_intent_regex
 
 
 class TestAssistant(unittest.TestCase):
-    @patch('netbox_gpt.assistant.get_client_from_env')
-    @patch('netbox_gpt.assistant.query_openai')
+    @patch('infractrl.assistant.get_client_from_env')
+    @patch('infractrl.assistant.query_openai')
     def test_process_query_list_devices(self, mock_query_openai, mock_get_client):
         # Setup mock
         mock_client = MagicMock()

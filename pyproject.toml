@@ -29,10 +29,10 @@ dependencies = [
 
 [project.scripts]
 mcp-server = "mcp_server.cli:main"
-netbox-gpt = "netbox_gpt.assistant:main"
+infractrl = "infractrl.assistant:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcp_server", "src/netbox_gpt"]
+packages = ["src/mcp_server", "src/infractrl"]
 
 [tool.hatch.build.targets.sdist]
 include = [

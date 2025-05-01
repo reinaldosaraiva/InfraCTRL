@@ -1,16 +1,18 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
-from netbox_gpt.netbox_client import NetBoxClient
+from infractrl.netbox_client import NetBoxClient
 
 
 class TestNetBoxClient(unittest.TestCase):
     def setUp(self):
         self.client = NetBoxClient('http://test-netbox/api', 'test-token')
 
-    @patch('netbox_gpt.netbox_client.requests.get')
-    def test_test_connection(self, mock_get):
-        # Setup mock
+    @patch('infractrl.netbox_client.requests.get')
+    @patch('infractrl.netbox_client.os.getenv')
+    def test_test_connection(self, mock_getenv, mock_get):
+        # Setup mock for non-simulation mode
+        mock_getenv.return_value = 'false'
         mock_response = MagicMock()
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
@@ -26,8 +28,8 @@ class TestNetBoxClient(unittest.TestCase):
             params={'limit': 1}
         )
 
-    @patch('netbox_gpt.netbox_client.os.getenv')
-    @patch('netbox_gpt.netbox_client.requests.get')
+    @patch('infractrl.netbox_client.os.getenv')
+    @patch('infractrl.netbox_client.requests.get')
     def test_get_devices(self, mock_get, mock_getenv):
         # Setup mock for non-simulation mode
         mock_getenv.return_value = 'false'
@@ -43,7 +45,7 @@ class TestNetBoxClient(unittest.TestCase):
         self.assertEqual(result, [{'name': 'test-device'}])
         mock_get.assert_called_once()
 
-    @patch('netbox_gpt.netbox_client.os.getenv')
+    @patch('infractrl.netbox_client.os.getenv')
     def test_get_devices_simulation(self, mock_getenv):
         # Setup mock for simulation mode
         mock_getenv.return_value = 'true'

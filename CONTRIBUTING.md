@@ -1,6 +1,6 @@
-# Contributing to NetBox GPT
+# Contributing to InfraCTRL
 
-We love your input! We want to make contributing to NetBox GPT as easy and transparent as possible, whether it's:
+We love your input! We want to make contributing to InfraCTRL as easy and transparent as possible, whether it's:
 
 - Reporting a bug
 - Discussing the current state of the code
@@ -32,7 +32,7 @@ When you submit code changes, your submissions are understood to be under the sa
 
 ## Report bugs using GitHub's [issue tracker]
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/reinaldosaraiva/netbox-gpt/issues); it's that easy!
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/reinaldosaraiva/InfraCTRL/issues); it's that easy!
 
 ## Write bug reports with detail, background, and sample code
 

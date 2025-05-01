@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="netbox-gpt",
+    name="infractrl",
     version="0.1.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
@@ -12,7 +12,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "netbox-gpt=netbox_gpt.assistant:main",
+            "infractrl=infractrl.assistant:main",
         ],
     },
     python_requires=">=3.8",

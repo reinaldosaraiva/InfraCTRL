@@ -1,4 +1,4 @@
-"""NetBox GPT - Natural language assistant using OpenAI's GPT models."""
+"""InfraCTRL Assistant - Natural language interface for infrastructure management."""
 
 import os
 import sys
@@ -12,7 +12,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.markdown import Markdown
 
-from netbox_gpt.netbox_client import get_client_from_env
+from infractrl.netbox_client import get_client_from_env
 
 # Initialize console
 console = Console()
@@ -475,10 +475,10 @@ def process_query(query: str) -> None:
 
 
 def main():
-    """Main function for the NetBox GPT assistant."""
+    """Main function for the InfraCTRL assistant."""
     console.print(Panel.fit(
-        "[bold cyan]NetBox GPT[/]\n"
-        "Natural language interface for NetBox using OpenAI GPT models",
+        "[bold cyan]InfraCTRL[/]\n"
+        "Multi-tool Control Platform for infrastructure management",
         title="Welcome"
     ))
     

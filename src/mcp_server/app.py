@@ -2,7 +2,6 @@
 
 import os
 import logging
-import importlib
 from typing import Dict, List, Optional, Any, Union
 
 from fastapi import FastAPI, Request, status
@@ -52,6 +51,14 @@ def create_app() -> FastAPI:
     # Mount Cursor IDE integration app
     cursor_app = create_cursor_integration_app()
     app.mount("/cursor", cursor_app)
+    
+    # Add direct route for debugging tools list
+    @app.get("/debug-tools")
+    async def debug_tools_list():
+        """Debug endpoint to check available MCP tools."""
+        from mcp_server.cursor_integration import mcp_server
+        tools = await mcp_server.list_tools()
+        return {"tools": [t.model_dump() for t in tools]}
     
     # Register built-in adapters
     adapter_registry.register_adapter_class("netbox", NetBoxAdapter)
